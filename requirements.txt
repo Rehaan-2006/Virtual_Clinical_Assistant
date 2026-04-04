@@ -1,0 +1,12 @@
+pydantic-ai
+crawl4ai
+supabase
+google-genai
+openai
+python-dotenv
+httpx
+logfire
+sentence-transformers
+httpx
+fastapi==0.110.1
+uvicorn==0.29.0
