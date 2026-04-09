@@ -1,15 +1,16 @@
 from __future__ import annotations as _annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 import logfire
 import os
 
+from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models.gemini import GeminiModel
 from supabase import Client
-from typing import List
+from typing import List, Dict, Any
 
 # Import sentence-transformers for local BAAI embeddings
 from sentence_transformers import SentenceTransformer
@@ -23,33 +24,30 @@ embedding_model = SentenceTransformer(model_name)
 
 # --- 2. Dynamic Model Router ---
 def get_llm_model(model_name: str):
-    """
-    Returns the correct Pydantic AI Model object based on the requested name.
-    """
-    model_name_lower = model_name.lower()
+    model_name_clean = model_name.lower().strip() 
     
-    # Route to Google Gemini natively
-    if "gemini" in model_name_lower:
-        # We still check if it exists so we can give a helpful error if it's missing
+    # Route only actual Gemini models to Google's Native API
+    if "gemini" in model_name_clean:
         if not os.getenv("GEMINI_API_KEY"):
             raise ValueError("GEMINI_API_KEY is missing from environment variables.")
+        return GeminiModel(model_name_clean)
         
-        # Pydantic AI automatically grabs the key from the environment now!
-        return GeminiModel(model_name)
-    
-    # Route to OpenRouter (using OpenAI compatibility) for Llama, Mistral, etc.
+    # Route EVERYTHING else (Llama, DeepSeek, Mistral, Gemma) to OpenRouter
     else:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY is missing from environment variables.")
-        return OpenAIModel(
-            model_name,
-            base_url='https://openrouter.ai/api/v1',
-            api_key=api_key
-        )
+            
+        # THE BULLETPROOF FIX: Override the base OpenAI environment variables directly
+        os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+        os.environ["OPENAI_API_KEY"] = api_key
 
-# Read the requested model from .env, fallback to gemini-1.5-pro if not set
-llm = os.getenv('LLM_MODEL', 'gemini-1.5-pro')
+        # Now Pydantic AI will naturally route to OpenRouter without fighting kwargs!
+        from pydantic_ai.models.openai import OpenAIModel
+        return OpenAIModel(model_name_clean)
+
+# Read the requested model from .env, fallback to gemini-2.5-pro if not set
+llm = os.getenv('LLM_MODEL', 'gemini-2.5-pro')
 model = get_llm_model(llm)
 
 logfire.configure(send_to_logfire='if-token-present')
@@ -58,11 +56,22 @@ logfire.configure(send_to_logfire='if-token-present')
 # --- 3. Dependencies ---
 @dataclass
 class PydanticAIDeps:
-    supabase: Client
+    # supabase: Client
+    supabase: Any
+    sources: List[Dict[str, Any]] = field(default_factory=list) # <-- NEW
+# Old single bot 
+# # Renamed agent variable to match its new role
+# clinical_assistant = Agent(
+#     model,
+#     system_prompt=system_prompt,
+#     deps_type=PydanticAIDeps,
+#     retries=2
+# )
 
-
-# --- Updated System Prompt for Medical Assistant ---
-system_prompt = """
+# --- 1. The Clinical RAG Agent ---
+clinical_assistant = Agent(
+    model, # Default model, gets overridden by the API
+    system_prompt="""
 You are an expert AI Medical Clinical Assistant. You have access to a secure database of clinical documentation, medical references, and guidelines.
 
 Your primary role is to assist users by providing accurate, evidence-based medical information retrieved strictly from your provided documentation tools. 
@@ -72,16 +81,18 @@ Always follow these guidelines:
 2. If needed, check the list of available medical reference pages and retrieve the full content of specific pages to gain more context.
 3. Base your answers solely on the retrieved text. Do not guess or hallucinate medical information.
 4. If you cannot find the answer in the retrieved documentation, be completely honest and state clearly that the information is not available in your current medical knowledge base.
-"""
-
-# Renamed agent variable to match its new role
-clinical_assistant = Agent(
-    model,
-    system_prompt=system_prompt,
-    deps_type=PydanticAIDeps,
-    retries=2
+""",
 )
 
+# --- NEW: 2. The Generic Standard Agent ---
+generic_assistant = Agent(
+    model, # Default model, gets overridden by the API
+    system_prompt=(
+        "You are an AI Medical Clinical Assistant."
+        "Answer the user's questions to the best of your ability. Even when asked to refer any specific documents just answer them to the best of your ability without referring to any documents. Do not use the RAG tools at all. Just answer based on your general medical knowledge. "
+        "Format your responses cleanly using markdown."
+    ),
+)
 
 # --- 4. Local Embedding Function ---
 async def get_embedding(text: str) -> List[float]:
@@ -135,7 +146,21 @@ async def retrieve_relevant_documentation(ctx: RunContext[PydanticAIDeps], user_
 {doc['content']}
 """
             formatted_chunks.append(chunk_text)
-            
+
+        for chunk in formatted_chunks:
+            if isinstance(chunk, dict):
+                # If it's a dictionary, extract the content and metadata safely
+                ctx.deps.sources.append({
+                    "content": chunk.get("content", str(chunk)),
+                    "metadata": chunk.get("metadata", {}) 
+                })
+            elif isinstance(chunk, str):
+                # If it's just a raw string, save it directly with a generic title
+                ctx.deps.sources.append({
+                    "content": chunk,
+                    "metadata": {"title": "Clinical Document"}
+                })
+
         # Join all chunks with a separator
         return "\n\n---\n\n".join(formatted_chunks)
         

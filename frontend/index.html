@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical AI Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <header>
+            <div class="brand">
+                <h1>Medical AI <span>Assistant</span></h1>
+            </div>
+            <div class="controls">
+                <select id="model-select">
+                    <optgroup label="Google Gemini (Native)">
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    </optgroup>
+
+                    <optgroup label="OpenRouter (Free Tier)">
+                        <option value="meta-llama/llama-3.3-70b-instruct:free">Meta Llama 3.3 70B</option>
+                        <option value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 80B</option>
+                        <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super 120B</option>
+                        <option value="google/gemma-4-26b-a4b-it:free">Google Gemma 4 26B</option>
+                        <option value="openai/gpt-oss-120b:free">OpenAI GPT-OSS 120B</option>
+                        <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air</option>
+                    </optgroup>
+                </select>
+                <button id="toggle-compare-btn" class="toggle-btn">Compare Mode: OFF</button>
+            </div>
+        </header>
+
+        <main class="chat-stage" id="chat-stage">
+            
+            <div class="chat-window" id="window-rag">
+                <div class="window-badge badge-blue">Clinical AI (RAG)</div>
+                <div class="chat-history" id="chat-history-rag">
+                    <div class="message-row ai-row">
+                        <div class="message-bubble ai-bubble">
+                            Hello. I am your evidence-based clinical assistant. How can I help you today?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-window hidden" id="window-generic">
+                <div class="window-badge badge-gray">Standard AI (No RAG)</div>
+                <div class="chat-history" id="chat-history-generic">
+                    <div class="message-row ai-row">
+                        <div class="message-bubble ai-bubble">
+                            Hello. I am a standard AI without access to clinical databases.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea id="user-input" rows="1" placeholder="Ask a medical question..."></textarea>
+                <button id="send-btn" title="Send message">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <footer>
+            <p>This AI is intended for educational and clinical assistance, not as a replacement for doctors.</p>
+        </footer>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
