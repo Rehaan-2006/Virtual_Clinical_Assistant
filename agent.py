@@ -26,26 +26,38 @@ embedding_model = SentenceTransformer(model_name)
 def get_llm_model(model_name: str):
     model_name_clean = model_name.lower().strip() 
     
-    # Route only actual Gemini models to Google's Native API
-    if "gemini" in model_name_clean:
+    # 1. NEW: Route to Local Ollama
+    # 1. NEW: Route to Local Ollama
+    if model_name_clean.startswith("ollama/"):
+        # Strip the "ollama/" prefix to get the real name (e.g., "llama3.2")
+        actual_model = model_name_clean.split("/")[1]
+        
+        from pydantic_ai.models.openai import OpenAIModel
+        # This checks if you are in Docker. If yes, it uses the Docker URL. If no, it uses localhost!
+        ollama_host = "host.docker.internal" if os.path.exists("/.dockerenv") else "localhost"
+        os.environ["OPENAI_BASE_URL"] = f"http://{ollama_host}:11434/v1"
+        os.environ["OPENAI_API_KEY"] = "ollama"
+        
+        return OpenAIModel(actual_model)
+        
+    # 2. Route to Google Native API
+    elif "gemini" in model_name_clean:
         if not os.getenv("GEMINI_API_KEY"):
             raise ValueError("GEMINI_API_KEY is missing from environment variables.")
         return GeminiModel(model_name_clean)
         
-    # Route EVERYTHING else (Llama, DeepSeek, Mistral, Gemma) to OpenRouter
+    # 3. Route EVERYTHING else to OpenRouter
     else:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY is missing from environment variables.")
             
-        # THE BULLETPROOF FIX: Override the base OpenAI environment variables directly
         os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
         os.environ["OPENAI_API_KEY"] = api_key
 
-        # Now Pydantic AI will naturally route to OpenRouter without fighting kwargs!
         from pydantic_ai.models.openai import OpenAIModel
         return OpenAIModel(model_name_clean)
-
+    
 # Read the requested model from .env, fallback to gemini-2.5-pro if not set
 llm = os.getenv('LLM_MODEL', 'gemini-2.5-pro')
 model = get_llm_model(llm)
