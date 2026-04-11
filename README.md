@@ -1,4 +1,4 @@
-# 🩺 Virtual Clinical Assistant (RAG vs. Generic LLM)
+# 🩺 CareAssist – AI-Powered Medical Decision Support System (RAG vs. Generic LLM)
 
 A full-stack, containerized AI application designed to demonstrate the power of **Retrieval-Augmented Generation (RAG)** in the medical field. 
 
