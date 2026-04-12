@@ -3,87 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical AI Assistant</title>
+    <title>CareAssist — Evidence-Based Medical Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
     <div class="app-container">
-        
-        <header>
-            <div class="brand">
-                <h1>Medical AI <span>Assistant</span></h1>
-            </div>
-            <div class="controls">
-                <select id="model-select">
-                    <optgroup label="Google Gemini (Native)">
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                        <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
-                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                        
-                    </optgroup>
-                    <optgroup label="Ollama (Local)">
-                        <option value="ollama/llama3.2:3b-instruct-q4_K_M">Llama 3.2 3B</option>
-                        <option value="ollama/llama3.1:8b-instruct-q4_K_M">Llama 3.1 8B</option>
-                        <option value="ollama/mistral:7b-instruct-v0.2-q4_K_M">Mistral 7B</option>
-                        <option value="ollama/phi3.5:3.8b-mini-instruct-q4_K_M">Phi3.5 mini 8B</option>
-                    </optgroup>
-                    <optgroup label="OpenRouter (Free Tier)">
-                        <!-- <option value="meta-llama/llama-3.3-70b-instruct:free">Meta Llama 3.3 70B</option>
-                        <option value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen3 80B</option> -->
-                        <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super 120B</option>
-                        <option value="google/gemma-4-26b-a4b-it:free">Google Gemma 4 26B</option>
-                        <option value="openai/gpt-oss-120b:free">OpenAI GPT-OSS 120B</option>
-                        <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air</option>
-                    </optgroup>
-                </select>
-                <button id="toggle-compare-btn" class="toggle-btn">Compare Mode: OFF</button>
-            </div>
-        </header>
 
-        <main class="chat-stage" id="chat-stage">
-            
-            <div class="chat-window" id="window-rag">
-                <div class="window-badge badge-blue">Clinical AI (RAG)</div>
-                <div class="chat-history" id="chat-history-rag">
-                    <div class="message-row ai-row">
-                        <div class="message-bubble ai-bubble">
-                            Hello. I am your evidence-based clinical assistant. How can I help you today?
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat-window hidden" id="window-generic">
-                <div class="window-badge badge-gray">Standard AI (No RAG)</div>
-                <div class="chat-history" id="chat-history-generic">
-                    <div class="message-row ai-row">
-                        <div class="message-bubble ai-bubble">
-                            Hello. I am a standard AI without access to clinical databases.
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-        </main>
-
-        <div class="input-area">
-            <div class="input-wrapper">
-                <textarea id="user-input" rows="1" placeholder="Ask a medical question..."></textarea>
-                <button id="send-btn" title="Send message">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-mark">
+                    <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+                        <rect x="12" y="2" width="4" height="24" rx="2" fill="currentColor"/>
+                        <rect x="2" y="12" width="24" height="4" rx="2" fill="currentColor"/>
+                        <circle cx="14" cy="14" r="4" fill="var(--bg-base)"/>
                     </svg>
-                </button>
+                </div>
+                <span class="logo-text">Care<em>Assist</em></span>
             </div>
-        </div>
-        <footer>
-            <p>This AI is intended for educational and clinical assistance, not as a replacement for doctors.</p>
-        </footer>
 
+            <nav class="sidebar-nav">
+                <div class="nav-label">Mode</div>
+                <button class="nav-item active" id="nav-rag">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                    Evidence-Based RAG
+                </button>
+                <button class="nav-item" id="nav-compare">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+                    Compare Mode
+                </button>
+            </nav>
+
+            <div class="sidebar-model">
+                <div class="nav-label">Active Model</div>
+                <div class="model-select-wrapper">
+                    <svg class="model-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    <select id="model-select">
+                        <optgroup label="Google Gemini">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                            <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash-Lite Preview</option>
+                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                        </optgroup>
+                        <optgroup label="Ollama (Local)">
+                            <option value="ollama/llama3.2:3b-instruct-q4_K_M">Llama 3.2 3B</option>
+                            <option value="ollama/llama3.1:8b-instruct-q4_K_M">Llama 3.1 8B</option>
+                            <option value="ollama/mistral:7b-instruct-v0.2-q4_K_M">Mistral 7B</option>
+                            <option value="ollama/phi3.5:3.8b-mini-instruct-q4_K_M">Phi3.5 Mini</option>
+                        </optgroup>
+                        <optgroup label="OpenRouter (Free)">
+                            <option value="nvidia/nemotron-3-super-120b-a12b:free">Nemotron 3 Super 120B</option>
+                            <option value="google/gemma-4-26b-a4b-it:free">Gemma 4 26B</option>
+                            <option value="openai/gpt-oss-120b:free">GPT-OSS 120B</option>
+                            <option value="z-ai/glm-4.5-air:free">GLM 4.5 Air</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <div class="sidebar-sources">
+                <div class="nav-label">Knowledge Bases</div>
+                <div class="source-badge">
+                    <span class="pulse-dot"></span>
+                    WHO / NICE Guidelines
+                </div>
+                <div class="source-badge">
+                    <span class="pulse-dot"></span>
+                    FDA DailyMed Labels
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>For clinical decision support only. Always apply professional judgment.</p>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main-content">
+
+            <header class="topbar">
+                <div class="topbar-left">
+                    <span class="topbar-title" id="topbar-mode-label">Evidence-Based Clinical Assistant</span>
+                    <div class="topbar-status">
+                        <span class="status-dot"></span>
+                        <span>Connected</span>
+                    </div>
+                </div>
+                <button id="clear-btn" class="icon-btn" title="Clear conversation">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Clear
+                </button>
+            </header>
+
+            <main class="chat-stage" id="chat-stage">
+
+                <div class="chat-window" id="window-rag">
+                    <div class="window-label">
+                        <span class="label-dot rag-dot"></span>
+                        RAG · Evidence-Based
+                    </div>
+                    <div class="chat-history" id="chat-history-rag">
+                        <div class="welcome-screen" id="welcome-rag">
+                            <div class="welcome-icon">
+                                <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
+                                    <rect x="12" y="2" width="4" height="24" rx="2" fill="currentColor"/>
+                                    <rect x="2" y="12" width="24" height="4" rx="2" fill="currentColor"/>
+                                    <circle cx="14" cy="14" r="4" fill="var(--bg-base)"/>
+                                </svg>
+                            </div>
+                            <h2>CareAssist</h2>
+                            <p>Grounded in WHO/NICE guidelines and FDA DailyMed. Describe a patient case or ask about drugs, labs, or pathways.</p>
+                            <div class="suggestion-chips">
+                                <button class="chip" data-query="Patient has HbA1c of 8.2% and eGFR of 45. What are the treatment options?">HbA1c 8.2%, eGFR 45 — options?</button>
+                                <button class="chip" data-query="First-line treatment for hypertension in a 65-year-old male patient">Hypertension first-line in elderly?</button>
+                                <button class="chip" data-query="Metformin dosage and renal adjustment for a patient with CKD Stage 3a">Metformin in CKD Stage 3a?</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-window hidden" id="window-generic">
+                    <div class="window-label">
+                        <span class="label-dot generic-dot"></span>
+                        Standard · No RAG
+                    </div>
+                    <div class="chat-history" id="chat-history-generic">
+                        <div class="welcome-screen" id="welcome-generic">
+                            <div class="welcome-icon generic">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                            </div>
+                            <h2>Standard LLM</h2>
+                            <p>General medical knowledge without database grounding. Compare against RAG responses to see the difference.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+
+            <div class="input-area">
+                <div class="input-wrapper" id="input-wrapper">
+                    <textarea id="user-input" rows="1" placeholder="Describe a patient case or ask a clinical question…"></textarea>
+                    <button id="send-btn" title="Send">
+                        <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint"><kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for new line</p>
+            </div>
+
+        </div>
     </div>
 
     <script src="script.js"></script>

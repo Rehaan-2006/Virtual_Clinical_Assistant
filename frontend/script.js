@@ -1,44 +1,115 @@
-// --- 1. Grab all the HTML Elements ---
-const toggleBtn = document.getElementById('toggle-compare-btn');
-const windowGeneric = document.getElementById('window-generic');
-const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const chatHistoryRag = document.getElementById('chat-history-rag');
-const chatHistoryGeneric = document.getElementById('chat-history-generic');
-const modelSelect = document.getElementById('model-select');
+// ==========================================
+// CONFIG — change this to your deployed URL
+// ==========================================
+const API_BASE_URL = "http://localhost:8000";
 
-// --- 2. The Compare Mode Toggle Logic ---
+// ==========================================
+// DOM REFS
+// ==========================================
+const navRag            = document.getElementById('nav-rag');
+const navCompare        = document.getElementById('nav-compare');
+const windowGeneric     = document.getElementById('window-generic');
+const userInput         = document.getElementById('user-input');
+const sendBtn           = document.getElementById('send-btn');
+const chatHistoryRag    = document.getElementById('chat-history-rag');
+const chatHistoryGeneric = document.getElementById('chat-history-generic');
+const modelSelect       = document.getElementById('model-select');
+const clearBtn          = document.getElementById('clear-btn');
+const topbarLabel       = document.getElementById('topbar-mode-label');
+const welcomeRag        = document.getElementById('welcome-rag');
+const welcomeGeneric    = document.getElementById('welcome-generic');
+
+// ==========================================
+// STATE
+// ==========================================
 let isCompareMode = false;
 
-toggleBtn.addEventListener('click', () => {
-    isCompareMode = !isCompareMode; // Flip the state
-    
-    if (isCompareMode) {
-        windowGeneric.classList.remove('hidden');
-        toggleBtn.classList.add('active');
-        toggleBtn.textContent = 'Compare Mode: ON';
-    } else {
-        windowGeneric.classList.add('hidden');
-        toggleBtn.classList.remove('active');
-        toggleBtn.textContent = 'Compare Mode: OFF';
+// ==========================================
+// MODE SWITCHING
+// ==========================================
+navRag.addEventListener('click', () => {
+    if (!isCompareMode) return;
+    isCompareMode = false;
+    windowGeneric.classList.add('hidden');
+    navRag.classList.add('active');
+    navCompare.classList.remove('active');
+    topbarLabel.textContent = 'Evidence-Based Clinical Assistant';
+});
+
+navCompare.addEventListener('click', () => {
+    if (isCompareMode) return;
+    isCompareMode = true;
+    windowGeneric.classList.remove('hidden');
+    navCompare.classList.add('active');
+    navRag.classList.remove('active');
+    topbarLabel.textContent = 'Compare Mode — RAG vs Standard LLM';
+});
+
+// ==========================================
+// CLEAR CONVERSATION
+// ==========================================
+clearBtn.addEventListener('click', () => {
+    // Remove all messages but restore welcome screens
+    chatHistoryRag.innerHTML = '';
+    chatHistoryGeneric.innerHTML = '';
+    if (welcomeRag)     chatHistoryRag.appendChild(welcomeRag);
+    if (welcomeGeneric) chatHistoryGeneric.appendChild(welcomeGeneric);
+});
+
+// ==========================================
+// SUGGESTION CHIPS
+// ==========================================
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('chip')) {
+        userInput.value = e.target.dataset.query;
+        userInput.style.height = 'auto';
+        userInput.style.height = userInput.scrollHeight + 'px';
+        userInput.focus();
     }
 });
 
-// --- 3. Auto-Resize Textarea ---
-userInput.addEventListener('input', function() {
+// ==========================================
+// AUTO-RESIZE TEXTAREA
+// ==========================================
+userInput.addEventListener('input', function () {
     this.style.height = 'auto';
-    this.style.height = (this.scrollHeight) + 'px';
+    this.style.height = this.scrollHeight + 'px';
 });
 
-// --- 4. Chat Bubble Generators ---
+// ==========================================
+// XSS ESCAPE
+// ==========================================
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+// ==========================================
+// HIDE WELCOME SCREEN ON FIRST MESSAGE
+// ==========================================
+function hideWelcome(container) {
+    const welcome = container.querySelector('.welcome-screen');
+    if (welcome) {
+        welcome.style.transition = 'opacity 0.2s';
+        welcome.style.opacity = '0';
+        setTimeout(() => welcome.remove(), 200);
+    }
+}
+
+// ==========================================
+// CHAT BUBBLE BUILDERS
+// ==========================================
 function appendUserMessage(text, container) {
+    hideWelcome(container);
+
     const row = document.createElement('div');
     row.className = 'message-row user-row';
-    
+
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble user-bubble';
     bubble.textContent = text;
-    
+
     row.appendChild(bubble);
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
@@ -47,124 +118,143 @@ function appendUserMessage(text, container) {
 function appendAILoading(container) {
     const row = document.createElement('div');
     row.className = 'message-row ai-row';
-    
+
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble ai-bubble';
-    bubble.innerHTML = '<em>Thinking...</em>'; // Temporary loading text
-    
+    bubble.innerHTML = `
+        <div class="thinking-dots">
+            <span></span><span></span><span></span>
+        </div>
+    `;
+
     row.appendChild(bubble);
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
-    
-    return bubble; 
+
+    return bubble;
 }
 
-// --- 5. The API Call Logic ---
-// This function talks to your Python FastAPI backend
+// ==========================================
+// SOURCES UI BUILDER
+// ==========================================
+function buildSourcesHTML(sources) {
+    if (!sources || sources.length === 0) return '';
+
+    let html = `
+        <div class="sources-container">
+            <button class="sources-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                ${sources.length} Source${sources.length > 1 ? 's' : ''} Retrieved
+            </button>
+            <div class="sources-list hidden">
+    `;
+
+    sources.forEach((src, index) => {
+        const title   = escapeHTML(src.metadata?.title || `Clinical Document ${index + 1}`);
+        const snippet = escapeHTML((src.content || '').substring(0, 160)) + '…';
+        html += `
+            <div class="source-card">
+                <div class="source-meta">${title}</div>
+                <div class="source-content">${snippet}</div>
+            </div>
+        `;
+    });
+
+    html += `</div></div>`;
+    return html;
+}
+
+// ==========================================
+// API CALL
+// ==========================================
 async function fetchAIResponse(endpoint, queryText, modelName, targetBubble) {
     try {
-        const response = await fetch(`http://localhost:8000${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            // Send the query AND the selected model to the backend
-            body: JSON.stringify({ query: queryText, model: modelName }) 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: queryText, model: modelName })
         });
 
         if (!response.ok) {
-            throw new Error('Server error');
+            let errorDetail = `Server error (${response.status})`;
+            try {
+                const errData = await response.json();
+                if (errData.detail) errorDetail = errData.detail;
+            } catch (_) { /* ignore */ }
+            throw new Error(errorDetail);
         }
 
         const data = await response.json();
 
         let finalHTML = marked.parse(data.response);
-        // 2. If this is the RAG model and it returned sources, build the UI!
-        if (data.sources && data.sources.length > 0) {
-            let sourcesHtml = `
-                <div class="sources-container">
-                    <button class="sources-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                        View Sources (${data.sources.length}) ▼
-                    </button>
-                    
-                    <div class="sources-list hidden">
-            `;
-            
-            // Create a card for each source chunk
-            data.sources.forEach((src, index) => {
-                // Fallback to "Document X" if your metadata doesn't have a title yet
-                const title = src.metadata.title || src.metadata.source || `Clinical Document ${index + 1}`;
-                // Grab the first 150 characters of the chunk as a preview snippet
-                const snippet = src.content.substring(0, 150) + "..."; 
-                
-                sourcesHtml += `
-                    <div class="source-card">
-                        <div class="source-meta">${title}</div>
-                        <div class="source-content">"${snippet}"</div>
-                    </div>
-                `;
-            });
-            
-            sourcesHtml += `</div></div>`;
-            
-            // Append the sources directly below the AI's text answer
-            finalHTML += sourcesHtml;
-        }
+        finalHTML += buildSourcesHTML(data.sources);
 
-        // 3. Render it to the screen
         targetBubble.innerHTML = finalHTML;
-        // Use marked.js to convert the AI's markdown response into beautiful HTML
-        // targetBubble.innerHTML = marked.parse(data.response);
+
+        const history = targetBubble.closest('.chat-history');
+        if (history) history.scrollTop = history.scrollHeight;
 
     } catch (error) {
         console.error("API Error:", error);
-        targetBubble.innerHTML = '<span style="color: #d93025;">Error: Could not connect to the AI. Make sure your backend is running!</span>';
+        targetBubble.innerHTML = `
+            <span class="error-message">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                ${escapeHTML(error.message || 'Could not connect. Is the backend running?')}
+            </span>
+        `;
     }
 }
 
-// --- 6. Handle the "Send" Action ---
+// ==========================================
+// SEND HANDLER
+// ==========================================
 async function handleSend() {
     const text = userInput.value.trim();
-    if (!text) return; // Do nothing if box is empty
-    
-    const selectedModel = modelSelect.value; // Get the dropdown value
+    if (!text) return;
 
-    // 1. Put user's message in the RAG window and show "Thinking..."
+    const selectedModel = modelSelect.value;
+    setSendingState(true);
+
     appendUserMessage(text, chatHistoryRag);
-    const ragAiBubble = appendAILoading(chatHistoryRag);
+    const ragBubble = appendAILoading(chatHistoryRag);
 
-    // 2. If Compare Mode is ON, do the exact same for the Generic window
-    let genericAiBubble = null;
+    let genericBubble = null;
     if (isCompareMode) {
         appendUserMessage(text, chatHistoryGeneric);
-        genericAiBubble = appendAILoading(chatHistoryGeneric);
+        genericBubble = appendAILoading(chatHistoryGeneric);
     }
 
-    // 3. Clear the input box and reset its height
     userInput.value = '';
     userInput.style.height = 'auto';
 
-    // 4. FIRE THE REAL API REQUESTS!
-    const ragPromise = fetchAIResponse('/api/chat', text, selectedModel, ragAiBubble);
-    
-    // If we are in compare mode, fire the second request simultaneously
+    const ragPromise = fetchAIResponse('/api/chat', text, selectedModel, ragBubble);
+
     if (isCompareMode) {
-        const genericPromise = fetchAIResponse('/api/chat/generic', text, selectedModel, genericAiBubble);
-        // Wait for BOTH to finish
-        await Promise.all([ragPromise, genericPromise]);
+        await Promise.all([
+            ragPromise,
+            fetchAIResponse('/api/chat/generic', text, selectedModel, genericBubble)
+        ]);
     } else {
-        // Just wait for the RAG response
         await ragPromise;
     }
+
+    setSendingState(false);
+    userInput.focus();
 }
 
-// --- 7. Event Listeners for Sending ---
+function setSendingState(isSending) {
+    sendBtn.disabled   = isSending;
+    userInput.disabled = isSending;
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
 sendBtn.addEventListener('click', handleSend);
 
 userInput.addEventListener('keydown', (e) => {
-    // If they hit Enter (but NOT Shift+Enter), send the message
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); 
+        e.preventDefault();
         handleSend();
     }
 });
