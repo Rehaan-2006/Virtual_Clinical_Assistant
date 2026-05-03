@@ -156,7 +156,7 @@ async def get_embedding(text: str) -> List[float]:
 clinical_assistant = Agent(
     model,
     deps_type=PydanticAIDeps,
-    retries=5, #2
+    retries=2, #5
     system_prompt="""
 You are an expert AI Medical Clinical Assistant. You have access to a secure database of
 WHO/NICE clinical guidelines and FDA DailyMed drug labels.

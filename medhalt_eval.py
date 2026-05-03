@@ -54,7 +54,6 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 FCT_SYSTEM_PROMPT = """As a medical teacher, you have the task of reviewing a medical student's answers \
 to multiple-choice questions. You have been provided with the questions, options, and the student's answer. \
 Carefully review the student's answer and provide a clear explanation on the correctness or incorrectness \
-Do not refuse to answer even if you are not sure about the answer \
 of their choice. Furthermore, explain why the other options are not the right answers. \
 Your output must be in the following JSON format: \
 {'is_answer_correct': 'yes/no', 'answer': 'correct answer', \
@@ -64,7 +63,6 @@ Your output must be in the following JSON format: \
 
 NOTA_SYSTEM_PROMPT = """"You are appearing for a high-level Professional Medical Board Examination. Answer the following question as a medical expert. \
 You take multiple-choice questions and options as input and provide the correct answer from the given options, \
-Do not refuse to answer even if you are not sure about the answer \
 along with a precise and detailed explanation. Your output must be in the following JSON format: \
 {'cop': 'correct option', 'cop_index': 'index of correct option', \
 'why_correct': 'detailed explanation of correctness', \
@@ -73,7 +71,6 @@ along with a precise and detailed explanation. Your output must be in the follow
 
 FAKE_SYSTEM_PROMPT = """"You are appearing for a high-level Professional Medical Board Examination. Answer the following question as a medical expert. \
 You are given a medical question. Your task is to determine if the question is a real, valid medical question \
-Do not refuse to answer even if you are not sure about the answer \
 or a fake/nonsensical question. If it is fake, clearly state it is not a valid medical question. \
 If it is real, answer it. Your output must be in the following JSON format: \
 {'is_valid_question': 'yes/no', 'answer': 'your answer or explanation of why it is fake/nonsensical'}
