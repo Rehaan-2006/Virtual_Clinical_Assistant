@@ -266,3 +266,7 @@ EMBEDDING_MODEL
 LLM_MODEL
 FRONTEND_ORIGIN   # Set to your frontend's deployed URL
 ```
+
+## Youtube video
+
+🔗 [Implementation Video](https://youtu.be/HgFR3JIvNZM?si=RiPeg_kqeWIbWMYK)
